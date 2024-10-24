@@ -134,7 +134,9 @@ async function add_quiz(ori_url, generated_url, user, quiz_list) {
     console.log('Quiz added to the db! ');
     console.log('Adding questions to the db...');
     add_questions(quiz_list, generate_link.id);
-  } catch (error) {}
+  } catch (error) {
+    console.log('Error in add_quiz: ', error);
+  }
 }
 
 async function check_existing_user(id, mail, name) {
