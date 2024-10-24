@@ -57,6 +57,7 @@ app.post('/create_link', async (req, res) => {
     console.log('Err in create_link: ', e);
     res.status(500).json({
       error: 'Internal Server Error',
+      message: e,
     });
   }
 });
@@ -73,7 +74,7 @@ async function get_user_quiz(user_id) {
       },
     });
 
-    console.log('ur quizez: ', user_quiz);
+    console.log('ur quizez: ', user_quiz.length);
   } catch (e) {
     console.log('Error in get_user_quiz: ', e);
   }
@@ -135,7 +136,7 @@ async function add_quiz(ori_url, generated_url, user, quiz_list) {
     console.log('Adding questions to the db...');
     add_questions(quiz_list, generate_link.id);
   } catch (error) {
-    console.log('Error in add_quiz: ', error);
+    throw new Error(error);
   }
 }
 
