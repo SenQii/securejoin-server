@@ -44,9 +44,9 @@ app.post('/create_link', async (req, res) => {
       .toString(36)
       .substring(2, 11)}`;
 
-    add_quiz(original_url, generatedURL, user, quiz_list);
+    await add_quiz(original_url, generatedURL, user, quiz_list);
 
-    get_user_quiz(user.id);
+    const user_quiz = await get_user_quiz(user.id);
 
     res.status(200).json({
       status: 'success',
