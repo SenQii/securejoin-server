@@ -62,6 +62,60 @@ app.post('/create_link', async (req, res) => {
   }
 });
 
+// EP
+app.post('/get_quiz', async (req, res) => {
+  try {
+    const { link } = req.body;
+
+    if (!link) {
+      return res.status(400).json({
+        error: 'Invalid body request',
+      });
+    }
+    console.log('going to check for the quiz: ', link);
+
+    console.log('is the link exist? ...');
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        url: link,
+      },
+      include: {
+        questions: true,
+      },
+    });
+    if (!quiz) {
+      console.log('there is no quiz with this link');
+      return res.status(404).json({
+        error: 'Quiz not found',
+      });
+    }
+    console.log('Quiz found: ', quiz);
+
+    let quiz_questions = [];
+
+    quiz.questions.map((item) => {
+      quiz_questions.push({
+        question: item.quistion,
+        answer: item.answer,
+      });
+    });
+
+    console.log('quiz_questions: ', quiz_questions);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Quiz found',
+      quiz: quiz_questions,
+    });
+  } catch (e) {
+    console.log('Err in get_quiz: ', e);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: e,
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log('running at ' + port);
 });
