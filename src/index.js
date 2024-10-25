@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 app.use(
   cors({
     origin: [
-      'http://localhost:3000',
+      'http://localhost:5173',
       'https://securejoin-dev.vercel.app',
       'https://securejoin.vercel.app',
     ],
@@ -79,14 +79,8 @@ app.post('/get_quiz', async (req, res) => {
     console.log('going to check for the quiz: ', link);
 
     console.log('is the link exist? ...');
-    const quiz = await prisma.quiz.findFirst({
-      where: {
-        url: link,
-      },
-      include: {
-        questions: true,
-      },
-    });
+    const quiz = await validate_link(link);
+
     if (!quiz) {
       console.log('there is no quiz with this link');
       return res.status(404).json({
@@ -95,14 +89,7 @@ app.post('/get_quiz', async (req, res) => {
     }
     console.log('Quiz found: ', quiz);
 
-    let quiz_questions = [];
-
-    quiz.questions.map((item) => {
-      quiz_questions.push({
-        question: item.quistion,
-        answer: item.answer,
-      });
-    });
+    const quiz_questions = get_Q(quiz.questions);
 
     console.log('quiz_questions: ', quiz_questions);
 
@@ -120,9 +107,82 @@ app.post('/get_quiz', async (req, res) => {
   }
 });
 
+// EP
+app.post('/check_answer', async (req, res) => {
+  try {
+    const { link, answers } = req.body;
+    if (!link || !answers) {
+      return res.status(400).json({
+        error: 'Invalid body request',
+      });
+    }
+
+    console.log('going to check for the quiz: ', link);
+    const quiz = await validate_link(link);
+    const quiz_questions = get_Q(quiz.questions);
+
+    console.log('last step, checking the answers...');
+    const solved = quiz_questions.some((item, index) => {
+      if (answers[index] !== item.answer) {
+        console.log('Wrong answer!');
+        return false;
+      }
+      return true;
+    });
+
+    console.log('solved: ', solved);
+
+    if (!solved)
+      return res.status(200).json({
+        status: 'failed',
+        message: 'Wrong answer',
+      });
+
+    console.log('All answers are correct!');
+    res.status(200).json({
+      status: 'success',
+      message: 'All answers are correct!',
+      direct_link: quiz.original_url,
+    });
+  } catch (e) {
+    console.log('Err in check_answer: ', e);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: e,
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log('running at ' + port);
 });
+
+function get_Q(questions) {
+  let quiz_questions = [];
+  questions.map((item) => {
+    quiz_questions.push({
+      question: item.quistion,
+      answer: item.answer,
+    });
+  });
+  return quiz_questions;
+}
+
+async function validate_link(link) {
+  try {
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        url: link,
+      },
+      include: {
+        questions: true,
+      },
+    });
+    return quiz;
+  } catch (e) {
+    throw new Error('Error in validate_link: ', e);
+  }
+}
 
 async function get_user_quiz(user_id) {
   try {
@@ -134,7 +194,7 @@ async function get_user_quiz(user_id) {
 
     console.log('ur quizez: ', user_quiz.length);
   } catch (e) {
-    console.log('Error in get_user_quiz: ', e);
+    throw new Error('Error in get_user_quiz: ', e);
   }
 }
 
@@ -164,7 +224,7 @@ async function add_questions(quiz_list, quiz_id) {
         },
       });
     } catch (e) {
-      console.log('Error in deleting the quiz: ', e);
+      throw new Error('Error in deleting the quiz: ', e);
     }
   }
 }
