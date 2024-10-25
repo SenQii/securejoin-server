@@ -9,7 +9,11 @@ const prisma = new PrismaClient();
 
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'https://securejoin-server.onrender.com'],
+    origin: [
+      'http://localhost:3000',
+      'https://securejoin-dev.vercel.app',
+      'https://securejoin.vercel.app',
+    ],
   })
 );
 app.use(express.json());
