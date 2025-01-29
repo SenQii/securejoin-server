@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { check_existing_user, get_user_data_from_access_token } from './auth';
 import { add_quiz, get_Q, get_user_quiz, validate_link } from './DB';
+import { SimpleQuestion } from './types';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,23 +22,23 @@ app.use(express.json());
 // EP
 app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
   try {
-    const { quiz_list, original_url } = req.body;
+    const {
+      quiz_list,
+      original_url,
+    }: { quiz_list: SimpleQuestion[]; original_url: string } = req.body;
 
     // auth check
     const access_Token = req.headers['access-token'] as string;
     const user = get_user_data_from_access_token(access_Token);
 
-    console.log('user: ', user.id);
-    console.log('original_url: ', original_url);
-    console.log('quiz_list: ', quiz_list);
-
-    // any missing data check
+    // Case: missing body
     if (!original_url || !quiz_list) {
       return res.status(400).json({
         error: 'Invalid body request',
       });
     }
 
+    console.log('Request Received: ', req.body);
     // handling new users
     const userExists = await check_existing_user(
       user.id,
@@ -63,7 +64,7 @@ app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
     console.log('Err in create_link: ', e);
     res.status(500).json({
       error: 'Internal Server Error',
-      message: e,
+      message: e.message,
     });
   }
 });

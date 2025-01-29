@@ -37,7 +37,10 @@ export async function get_user_quiz(user_id: string) {
 }
 
 // add questions to the desired quiz
-export async function add_questions(quiz_list: Question[], quiz_id: string) {
+export async function add_questions(
+  quiz_list: SimpleQuestion[],
+  quiz_id: string
+) {
   try {
     // per question, add them to the db
     console.log('Adding questions to the db...');
@@ -46,7 +49,7 @@ export async function add_questions(quiz_list: Question[], quiz_id: string) {
       await prisma.question.create({
         data: {
           quizId: quiz_id,
-          quistion: item.quistion,
+          quistion: item.question,
           answer: item.answer,
         },
       });
@@ -73,7 +76,7 @@ export async function add_quiz(
   ori_url: string,
   generated_url: string,
   user: { id: string },
-  quiz_list: Question[]
+  quiz_list: SimpleQuestion[]
 ) {
   try {
     // Validate URLs >> already handled in FE, but in case
