@@ -32,9 +32,10 @@ model Quiz {
 }
 
 model Question {
-  id       String @id @default(uuid())
-  quizId   String
-  quistion String
-  answer   String
-  quiz     Quiz   @relation(fields: [quizId], references: [id])
+  id           String @id @default(uuid())
+  quizId       String
+  questionType String @default("text")
+  quistion     String
+  answer       String
+  quiz         Quiz   @relation(fields: [quizId], references: [id])
 }

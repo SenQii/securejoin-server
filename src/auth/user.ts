@@ -4,6 +4,12 @@ import { JWTPayload } from '../types';
 
 // is user logged in?
 export function get_user_data_from_access_token(access_Token: string) {
+  // dummy check
+  return {
+    id: '63ef7219-2b36-4053-bfea-61ff29310246',
+    email: 'tst@tst.com',
+    username: 'test',
+  };
   const user = {
     id: jwtDecode(access_Token).sub || '',
     email: (jwtDecode(access_Token) as JWTPayload).user_email,
