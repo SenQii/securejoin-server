@@ -79,14 +79,6 @@ export async function add_quiz(
   quiz_list: SimpleQuestion[]
 ) {
   try {
-    // Validate URLs >> already handled in FE, but in case
-    if (!ori_url.startsWith('http')) {
-      throw new Error('Invalid original URL format');
-    }
-    if (!generated_url.startsWith('https://securejoin.com/')) {
-      throw new Error('Invalid generated URL format');
-    }
-
     // 1: vaidation
     console.log('verifying...');
     const user_quiz = await prisma.quiz.findFirst({
