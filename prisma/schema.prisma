@@ -23,36 +23,33 @@ model User {
 }
 
 model Quiz {
-  id                   String     @id @default(uuid())
+  id                   String               @id @default(uuid())
   ownerId              String
   url                  String
   original_url         String
-  owner                User       @relation(fields: [ownerId], references: [id])
+  owner                User                 @relation(fields: [ownerId], references: [id])
   vertificationMethods VerificationMethod[]
-  OTPmethod           String?
+  OTPmethod            String?
   questions            Question[]
 }
 
 model Question {
-  id           String @id @default(uuid())
+  id           String   @id @default(uuid())
   quizId       String
-  questionType String @default("text")
+  questionType String   @default("text")
   question     String
   answer       String
-  quiz         Quiz   @relation(fields: [quizId], references: [id])
+  quiz         Quiz     @relation(fields: [quizId], references: [id])
   options      Option[]
 }
 
-
-
 model Option {
-  id          String  @id @default(uuid())
-  questionId  String
-  question    Question @relation(fields: [questionId], references: [id])
-  label       String
-  isCorrect   Boolean @default(false)
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  label      String
+  isCorrect  Boolean  @default(false)
 }
-
 
 enum VerificationMethod {
   OTP
