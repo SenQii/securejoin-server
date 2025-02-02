@@ -1,5 +1,14 @@
 import { prisma } from '.';
-import { Question, SimpleQuestion } from '../types';
+import { Question, Quiz, Option } from '../types';
+import { type VerificationMethod } from '@prisma/client';
+
+type generate_link = {
+  id: string;
+  ownerId: string;
+  url: string;
+  original_url: string;
+  vertificationMethods: VerificationMethod[];
+};
 
 // is the link valid?
 export async function validate_link(link: string) {
@@ -9,7 +18,9 @@ export async function validate_link(link: string) {
         url: link,
       },
       include: {
-        questions: true,
+        questions: {
+          include: { options: true },
+        },
       },
     });
     // CASE : quiz not found
@@ -37,22 +48,48 @@ export async function get_user_quiz(user_id: string) {
 }
 
 // add questions to the desired quiz
-export async function add_questions(
-  quiz_list: SimpleQuestion[],
-  quiz_id: string
-) {
+export async function add_questions(quiz_list: Question[], quiz_id: string) {
   try {
     // per question, add them to the db
     console.log('Adding questions to the db...');
 
     const added_Q = quiz_list.map(async (item) => {
-      await prisma.question.create({
+      if (!item.question) {
+        throw new Error('Question text is required');
+      }
+      console.log('item.questionType: ', item.questionType);
+
+      // Create the question
+      const createdQuestion = await prisma.question.create({
         data: {
           quizId: quiz_id,
-          quistion: item.question,
-          answer: item.answer,
+          question: item.question,
+          answer: item.questionType === 'text' ? item.answer : '',
+          questionType: item.questionType,
         },
       });
+
+      // If it's MCQ, create the options
+      if (item.questionType === 'mcq' && item.options) {
+        if (item.options.length < 2) {
+          throw new Error('MCQ must have at least two options.');
+        }
+
+        const correctOptions = item.options.filter((opt) => opt.isCorrect);
+        if (correctOptions.length !== 1) {
+          throw new Error('MCQ must have exactly one correct answer.');
+        }
+
+        await prisma.option.createMany({
+          data: item.options.map((opt) => ({
+            questionId: createdQuestion.id,
+            label: opt.label,
+            isCorrect: opt.isCorrect,
+          })),
+        });
+      }
+
+      return createdQuestion;
     });
     await Promise.all(added_Q);
     console.log('Questions added to the db!');
@@ -76,7 +113,9 @@ export async function add_quiz(
   ori_url: string,
   generated_url: string,
   user: { id: string },
-  quiz_list: SimpleQuestion[]
+  quiz_list: Question[],
+  vertify_methods: 'questions' | 'otp' | 'both',
+  otp_method?: 'mail' | 'sms'
 ) {
   try {
     // 1: vaidation
@@ -93,26 +132,72 @@ export async function add_quiz(
 
     // 2: Quiz creation
     console.log('Adding quiz to the db...');
-    const generate_link = await prisma.quiz.create({
-      data: {
-        url: generated_url,
-        original_url: ori_url,
-        ownerId: user.id,
-      },
-    });
+    console.log('vertify_methods: ', vertify_methods);
 
+    let generate_link: generate_link;
+
+    // CASE: OTP quiz
+    if (vertify_methods === 'otp') {
+      console.log('OTP quiz');
+      generate_link = await prisma.quiz.create({
+        data: {
+          url: generated_url,
+          original_url: ori_url,
+          ownerId: user.id,
+          vertificationMethods: ['OTP'],
+          OTPmethod: otp_method,
+        },
+      });
+
+      // CASE: Questions quiz
+    } else if (vertify_methods === 'questions') {
+      console.log('Questions quiz');
+      generate_link = await prisma.quiz.create({
+        data: {
+          url: generated_url,
+          original_url: ori_url,
+          vertificationMethods: ['QUESTIONS'],
+          ownerId: user.id,
+        },
+      });
+
+      // CASE: Both quiz
+    } else {
+      console.log('Dual quiz');
+      generate_link = await prisma.quiz.create({
+        data: {
+          url: generated_url,
+          original_url: ori_url,
+          ownerId: user.id,
+          vertificationMethods: ['OTP', 'QUESTIONS'],
+        },
+      });
+    }
     // 3: Questions creation & adding
     console.log('Quiz added to the db! ');
-    console.log('Adding questions to the db...');
-    add_questions(quiz_list, generate_link.id);
+    if (vertify_methods === 'questions' || vertify_methods === 'both') {
+      console.log('Adding questions to the db...');
+      add_questions(quiz_list, generate_link.id);
+    }
   } catch (error) {
     throw new Error(error);
   }
 }
 
-export function get_Q(questions: Question[]): SimpleQuestion[] {
-  return questions.map((item) => ({
-    question: item.quistion,
-    answer: item.answer,
-  }));
+export function get_Q(questions: any[]): Question[] {
+  return questions.map((q) => {
+    if (q.questionType !== 'mcq' && q.questionType !== 'text') {
+      throw new Error(`Invalid question type: ${q.questionType}`);
+    }
+
+    // For MCQ questions, find the correct answer from options
+    if (q.questionType === 'mcq') {
+      const correctOption = q.options.find((opt: any) => opt.isCorrect);
+      q.answer = correctOption ? correctOption.label : '';
+    }
+
+    return q as Question;
+  });
 }
+
+export function OTpvertify() {}
