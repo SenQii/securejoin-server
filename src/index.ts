@@ -2,7 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { check_existing_user, get_user_data_from_access_token } from './auth';
 import { add_quiz, get_Q, get_user_quiz, validate_link } from './DB';
-import { SimpleQuestion } from './types';
+import { Question } from './types';
+import { VerificationMethod } from '@prisma/client';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -25,14 +26,21 @@ app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
     const {
       quiz_list,
       original_url,
-    }: { quiz_list: SimpleQuestion[]; original_url: string } = req.body;
+      vertify_methods,
+      otp_method,
+    }: {
+      quiz_list: Question[];
+      original_url: string;
+      vertify_methods: 'questions' | 'otp' | 'both';
+      otp_method?: 'mail' | 'sms';
+    } = req.body;
 
     // auth check
     const access_Token = req.headers['access-token'] as string;
     const user = get_user_data_from_access_token(access_Token);
 
     // Case: missing body
-    if (!original_url || !quiz_list) {
+    if (!original_url || (!quiz_list && !vertify_methods)) {
       return res.status(400).json({
         error: 'Invalid body request',
       });
@@ -51,7 +59,22 @@ app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
       .substring(2, 11)}`;
 
     // push to DB
-    await add_quiz(original_url, generatedURL, user, quiz_list);
+    otp_method
+      ? await add_quiz(
+          original_url,
+          generatedURL,
+          user,
+          quiz_list,
+          vertify_methods,
+          otp_method
+        )
+      : await add_quiz(
+          original_url,
+          generatedURL,
+          user,
+          quiz_list,
+          vertify_methods
+        );
 
     // const user_quiz = await get_user_quiz(user.id);
 
@@ -90,16 +113,56 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
         error: 'Quiz not found',
       });
     }
-    console.log('Quiz found: ', quiz);
+    console.log('Quiz found: ', JSON.stringify(quiz, null, 2));
 
-    const quiz_questions = get_Q(quiz.questions);
+    // CASE: no questions in Q or Both
+    if (
+      (!quiz.questions || quiz.questions.length === 0) &&
+      (quiz.vertificationMethods.includes('BOTH') ||
+        quiz.vertificationMethods.includes('QUESTIONS'))
+    ) {
+      console.log('there is no questions in this quiz');
+      return res.status(404).json({
+        error: 'No questions found',
+      });
+    }
 
-    console.log('quiz_questions: ', quiz_questions);
+    // CASE: OTP only
+    if (
+      quiz.vertificationMethods.includes('OTP') &&
+      quiz.vertificationMethods.length === 1 &&
+      quiz.OTPmethod
+    ) {
+      console.log('OTP only quiz');
+      return res.status(200).json({
+        status: 'success',
+        message: 'OTP',
+        otp_method: quiz.OTPmethod,
+        vertify_methods: quiz.vertificationMethods,
+      });
 
+      // CASE: Questions only
+    } else if (
+      quiz.vertificationMethods.includes('QUESTIONS') &&
+      quiz.vertificationMethods.length === 1
+    ) {
+      console.log('Questions only quiz');
+      return res.status(200).json({
+        status: 'success',
+        message: 'Questions',
+        quiz: quiz.questions,
+        vertify_methods: quiz.vertificationMethods,
+      });
+    }
+    // CASE: Both
+    console.log('quiz_questions: ', quiz.questions);
+    console.log('Quiz found: ', quiz.vertificationMethods);
     res.status(200).json({
       status: 'success',
-      message: 'Quiz found',
-      quiz: quiz_questions,
+      message: 'BOTH',
+      quiz: quiz.questions,
+      otp_method: quiz.OTPmethod,
+      vertify_methods: quiz.vertificationMethods,
     });
   } catch (e) {
     console.log('Err in get_quiz: ', e);
@@ -125,12 +188,14 @@ app.post('/check_answer', async (req: Request, res: Response): Promise<any> => {
     const quiz_questions = get_Q(quiz.questions);
 
     console.log('last step, checking the answers...');
-    const solved = quiz_questions.some((item, index) => {
-      if (answers[index] !== item.answer) {
-        console.log('Wrong answer!');
-        return false;
+
+    const solved = quiz.questions.every((question, index) => {
+      if (question.questionType === 'mcq') {
+        const correctOption = question.options.find((opt) => opt.isCorrect);
+        return answers[index] === correctOption?.label;
+      } else {
+        return answers[index] === question.answer;
       }
-      return true;
     });
 
     console.log('solved: ', solved);

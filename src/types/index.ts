@@ -1,8 +1,15 @@
-export type { Question, Quiz, Prisma } from '@prisma/client';
+export type { Quiz, Prisma, Option } from '@prisma/client';
 
-export interface SimpleQuestion {
+export interface MCOption {
+  label: string;
+  isCorrect: boolean;
+}
+
+export interface Question {
   question: string;
+  questionType: 'text' | 'mcq';
   answer: string;
+  options?: MCOption[];
 }
 
 export interface JWTPayload {
