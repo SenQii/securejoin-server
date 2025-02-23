@@ -4,6 +4,7 @@ import { check_existing_user, get_user_data_from_access_token } from './auth';
 import { add_quiz, get_Q, get_user_quiz, validate_link } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
+import Twilio from 'twilio';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,7 +21,14 @@ app.use(
 );
 app.use(express.json());
 
-// EP
+// Twillo for OTP
+const accountSid = 'AC2b0114842c236ae5cd46147d03888119';
+const authToken = '846d150eeb2f49c0379e0ddc1d7ec088';
+const client = Twilio(accountSid, authToken);
+
+let direct_link = '';
+
+// EP - creatung secureLink
 app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
   try {
     const {
@@ -92,7 +100,7 @@ app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-// EP
+// EP - fetch quiz / auth mehod(s)
 app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
   try {
     const { link } = req.body;
@@ -106,6 +114,7 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
 
     console.log('is the link exist? ...');
     const quiz = await validate_link(link);
+    direct_link = quiz.original_url;
 
     if (!quiz) {
       console.log('there is no quiz with this link');
@@ -173,7 +182,7 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-// EP
+// EP - check answers
 app.post('/check_answer', async (req: Request, res: Response): Promise<any> => {
   try {
     const { link, answers } = req.body;
@@ -217,6 +226,105 @@ app.post('/check_answer', async (req: Request, res: Response): Promise<any> => {
     res.status(500).json({
       error: 'Internal Server Error',
       message: e,
+    });
+  }
+});
+
+// EP - OTP handle
+app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
+  try {
+    console.log('sending OTP...');
+
+    // req body chek
+    const { method, contact } = req.body as {
+      method: 'mail' | 'sms';
+      contact: string;
+    };
+    console.log('req.body: ', req.body);
+
+    if (!method || !contact)
+      return res.status(400).json({
+        error: 'Invalid body request',
+      });
+
+    // send OTP
+    if (method === 'mail') {
+      // temp
+      console.log('OTP sent to mail');
+      return res.status(200).json({
+        status: 'approved',
+        message: 'تم إرسال رمز التحقق بنجاح',
+      });
+    }
+    const response = await client.verify.v2
+      .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+      .verifications.create({ to: `${contact}`, channel: 'sms' });
+
+    console.log('status:', response);
+    if (response.status !== 'pending' && response.status !== 'approved') {
+      console.log('OTP sending failed');
+      return res.status(500).json({
+        error: 'OTP sending failed',
+      });
+    }
+    res.status(200).json({
+      status: 'approved',
+      message: 'تم إرسال رمز التحقق بنجاح',
+    });
+  } catch (e) {
+    console.log('Err in send_otp: ', e);
+    if (e.status == 403)
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'تم حظر الرقم عن استخدام الخدمة',
+      });
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: e.message,
+    });
+  }
+});
+
+// EP - OTP verification
+app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
+  try {
+    console.log('verifying OTP...');
+
+    // req body check
+    const { code } = req.body as { code: string };
+    if (!code)
+      return res.status(400).json({
+        error: 'Invalid body request',
+      });
+
+    // verification
+    const response = await client.verify.v2
+      .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+      .verificationChecks.create({ to: '+966554659434', code: code });
+
+    console.log('statue: ', response);
+    // response check & return
+    if (response.status == 'approved') {
+      console.log('OTP verified successfully');
+      return res
+        .status(200)
+        .json({ status: 'approved', message: 'تم التحقق من رمز التحقق بنجاح', direct_link });
+    } else if (response.status == 'expired') {
+      console.log('Verification code expired');
+      return res
+        .status(200)
+        .json({ status: 'expired', message: 'انتهت صلاحية رمز التحقق' });
+    }
+
+    console.log('Verification code failed');
+    return res
+      .status(200)
+      .json({ status: 'failed', message: 'فشل التحقق من رمز التحقق' });
+  } catch (error) {
+    console.log('Err in verify_otp: ', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error,
     });
   }
 });
