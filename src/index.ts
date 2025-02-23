@@ -5,7 +5,9 @@ import { add_quiz, get_Q, get_user_quiz, validate_link } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
 import Twilio from 'twilio';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -21,10 +23,11 @@ app.use(
 );
 app.use(express.json());
 
-// Twillo for OTP
-const accountSid = 'AC2b0114842c236ae5cd46147d03888119';
-const authToken = '846d150eeb2f49c0379e0ddc1d7ec088';
-const client = Twilio(accountSid, authToken);
+// Twilio for OTP
+const client = Twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 let direct_link = '';
 
@@ -249,28 +252,38 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
 
     // send OTP
     if (method === 'mail') {
-      // temp
-      console.log('OTP sent to mail');
-      return res.status(200).json({
-        status: 'approved',
-        message: 'تم إرسال رمز التحقق بنجاح',
-      });
-    }
-    const response = await client.verify.v2
-      .services('VA1294d0625bdb7f42e0da629ca314f4ad')
-      .verifications.create({ to: `${contact}`, channel: 'sms' });
+      const response = await client.verify.v2
+        .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+        .verifications.create({ to: `${contact}`, channel: 'email' });
 
-    console.log('status:', response);
-    if (response.status !== 'pending' && response.status !== 'approved') {
-      console.log('OTP sending failed');
-      return res.status(500).json({
-        error: 'OTP sending failed',
+      console.log('status:', response);
+      if (response.status !== 'pending' && response.status !== 'approved') {
+        console.log('OTP sending failed');
+        return res.status(500).json({
+          error: 'OTP sending failed',
+        });
+      }
+      res.status(200).json({
+        status: 'approved',
+        message: 'تم إرسال رمز التحقق بنجاح, يرجى التحقق من البريد الإلكتروني',
+      });
+    } else {
+      const response = await client.verify.v2
+        .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+        .verifications.create({ to: `${contact}`, channel: 'sms' });
+
+      console.log('status:', response);
+      if (response.status !== 'pending' && response.status !== 'approved') {
+        console.log('OTP sending failed');
+        return res.status(500).json({
+          error: 'OTP sending failed',
+        });
+      }
+      res.status(200).json({
+        status: 'approved',
+        message: 'تم إرسال رمز التحقق بنجاح, يرجى التحقق من الرسائل النصية',
       });
     }
-    res.status(200).json({
-      status: 'approved',
-      message: 'تم إرسال رمز التحقق بنجاح',
-    });
   } catch (e) {
     console.log('Err in send_otp: ', e);
     if (e.status == 403)
@@ -291,7 +304,10 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     console.log('verifying OTP...');
 
     // req body check
-    const { code } = req.body as { code: string };
+    const { code, contact } = req.body as {
+      code: string;
+      contact: string;
+    };
     if (!code)
       return res.status(400).json({
         error: 'Invalid body request',
@@ -300,15 +316,17 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     // verification
     const response = await client.verify.v2
       .services('VA1294d0625bdb7f42e0da629ca314f4ad')
-      .verificationChecks.create({ to: '+966554659434', code: code });
+      .verificationChecks.create({ to: contact, code: code });
 
     console.log('statue: ', response);
     // response check & return
     if (response.status == 'approved') {
       console.log('OTP verified successfully');
-      return res
-        .status(200)
-        .json({ status: 'approved', message: 'تم التحقق من رمز التحقق بنجاح', direct_link });
+      return res.status(200).json({
+        status: 'approved',
+        message: 'تم التحقق من رمز التحقق بنجاح',
+        direct_link,
+      });
     } else if (response.status == 'expired') {
       console.log('Verification code expired');
       return res
