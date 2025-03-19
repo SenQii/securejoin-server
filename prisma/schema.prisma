@@ -27,10 +27,13 @@ model Quiz {
   ownerId              String
   url                  String
   original_url         String
+  groupName            String?             @default("مجموعة")
   owner                User                 @relation(fields: [ownerId], references: [id])
   vertificationMethods VerificationMethod[]
   OTPmethod            String?
   questions            Question[]
+  lastAttemptAt        DateTime?
+  attempts_log         Json?
 }
 
 model Question {

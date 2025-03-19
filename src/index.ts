@@ -347,6 +347,28 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
+// EP - user's quiz(s)
+app.post(
+  '/get_user_quiz',
+  async (req: Request, res: Response): Promise<any> => {
+    try {
+      console.log('getting user quiz(s)...');
+      const access_Token = req.headers['access-token'] as string;
+      const user = get_user_data_from_access_token(access_Token);
+      const user_quiz = await get_user_quiz(user.id);
+
+      console.log('User Quiz(s): ', user_quiz);
+
+      res
+        .status(200)
+        .json({ status: 'success', message: 'User Quiz(s)', quiz: user_quiz });
+    } catch (e) {
+      console.log('Err in get_user_quiz: ', e);
+      res.status(500).json({ error: 'Internal Server Error', message: e });
+    }
+  }
+);
+
 app.listen(port, () => {
   console.log('running at ' + port);
 });
