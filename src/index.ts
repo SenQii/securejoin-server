@@ -1,7 +1,13 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { check_existing_user, get_user_data_from_access_token } from './auth';
-import { add_quiz, get_Q, get_user_quiz, validate_link } from './DB';
+import {
+  add_quiz,
+  get_Q,
+  get_user_quiz,
+  validate_link,
+  delete_quiz,
+} from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
 import Twilio from 'twilio';
@@ -369,6 +375,42 @@ app.post(
   }
 );
 
+//EP - delete quiz
+app.post('/delete_quiz', async (req: Request, res: Response): Promise<any> => {
+  try {
+    console.log('im here: ', req.body);
+    const access_Token = req.headers['access-token'] as string;
+    const { quiz_id } = req.body;
+    // data check
+    if (!quiz_id || !access_Token) {
+      return res.status(400).json({
+        error: 'Invalid body request',
+      });
+    }
+    console.log('deleting quiz...');
+    // auth check
+    const user = get_user_data_from_access_token(access_Token);
+
+    // fetch the quiz
+    const user_quiz = await get_user_quiz(user.id);
+    const quiz = user_quiz.find((q) => q.id === quiz_id); // find to delete quiz
+
+    if (!quiz) {
+      return res
+        .status(404)
+        .json({ error: 'Quiz not found or does not belong to you' });
+    }
+
+    // delete quiz
+    await delete_quiz(quiz_id);
+    console.log(`Quiz: \"${quiz.groupName}\" deleted successfully`);
+
+    return res.status(200).json({ message: 'Quiz deleted successfully' });
+  } catch (error) {
+    console.log('Err in delete_quiz: ', error);
+    res.status(500).json({ error: 'Internal Server Error', message: error });
+  }
+});
 app.listen(port, () => {
   console.log('running at ' + port);
 });

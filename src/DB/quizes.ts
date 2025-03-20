@@ -200,4 +200,37 @@ export function get_Q(questions: any[]): Question[] {
   });
 }
 
+// quiz deletion
+export async function delete_quiz(quiz_id: string) {
+  try {
+    console.log('Deleting associated tables...');
+    // 1: delete options (grand child)
+    await prisma.option.deleteMany({
+      where: {
+        question: {
+          quizId: quiz_id,
+        },
+      },
+    });
+
+    // 2: delete questions (child)
+    await prisma.question.deleteMany({
+      where: {
+        quizId: quiz_id,
+      },
+    });
+
+    console.log('Deleting quiz...');
+    // 3: delete quiz (parent)
+    await prisma.quiz.delete({
+      where: {
+        id: quiz_id,
+      },
+    });
+  } catch (e) {
+    console.error('Error in delete_quiz function:', e);
+    throw new Error('Failed to delete quiz');
+  }
+}
+
 export function OTpvertify() {}

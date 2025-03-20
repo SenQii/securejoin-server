@@ -5,4 +5,5 @@ export {
   add_questions,
   add_quiz,
   get_Q,
+  delete_quiz,
 } from './quizes.js';
