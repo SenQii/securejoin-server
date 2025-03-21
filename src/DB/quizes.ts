@@ -233,4 +233,18 @@ export async function delete_quiz(quiz_id: string) {
   }
 }
 
+export async function does_link_exist(url: string) {
+  try {
+    const exist = await prisma.quiz.findFirst({
+      where: {
+        url: url,
+      },
+    });
+    return exist ? true : false;
+  } catch (e) {
+    console.error('Error in doesLinkExist: ', e);
+    throw new Error('Error in doesLinkExist: ', e);
+  }
+}
+
 export function OTpvertify() {}

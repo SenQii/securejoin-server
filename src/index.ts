@@ -7,11 +7,13 @@ import {
   get_user_quiz,
   validate_link,
   delete_quiz,
+  does_link_exist,
 } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
 import Twilio from 'twilio';
 import dotenv from 'dotenv';
+import { wordList } from './words';
 
 dotenv.config();
 const app = express();
@@ -70,10 +72,20 @@ app.post('/create_link', async (req: Request, res: Response): Promise<any> => {
       user.email,
       user.username
     );
-    // should be customized later
-    const generatedURL = `https://securejoin.com/${Math.random()
-      .toString(36)
-      .substring(2, 11)}`;
+
+    async function generateLink(): Promise<string> {
+      const word1 = wordList[Math.floor(Math.random() * wordList.length)];
+      const word2 = wordList[Math.floor(Math.random() * wordList.length)];
+      const word3 = wordList[Math.floor(Math.random() * wordList.length)];
+      const number = Math.floor(100 + Math.random() * 900);
+
+      // chack its not duplicated in the DB -> later
+      // const duplicated = await does_link_exist(`https://securejoin.vercel.app/${word1}-${word2}-${word3}-${number}`);
+      return `https://securejoin.vercel.app/${word1}-${word2}-${word3}-${number}`;
+      //
+    }
+
+    const generatedURL = await generateLink();
 
     // push to DB
     otp_method
