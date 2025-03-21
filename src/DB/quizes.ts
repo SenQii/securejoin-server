@@ -200,4 +200,51 @@ export function get_Q(questions: any[]): Question[] {
   });
 }
 
+// quiz deletion
+export async function delete_quiz(quiz_id: string) {
+  try {
+    console.log('Deleting associated tables...');
+    // 1: delete options (grand child)
+    await prisma.option.deleteMany({
+      where: {
+        question: {
+          quizId: quiz_id,
+        },
+      },
+    });
+
+    // 2: delete questions (child)
+    await prisma.question.deleteMany({
+      where: {
+        quizId: quiz_id,
+      },
+    });
+
+    console.log('Deleting quiz...');
+    // 3: delete quiz (parent)
+    await prisma.quiz.delete({
+      where: {
+        id: quiz_id,
+      },
+    });
+  } catch (e) {
+    console.error('Error in delete_quiz function:', e);
+    throw new Error('Failed to delete quiz');
+  }
+}
+
+export async function does_link_exist(url: string) {
+  try {
+    const exist = await prisma.quiz.findFirst({
+      where: {
+        url: url,
+      },
+    });
+    return exist ? true : false;
+  } catch (e) {
+    console.error('Error in doesLinkExist: ', e);
+    throw new Error('Error in doesLinkExist: ', e);
+  }
+}
+
 export function OTpvertify() {}

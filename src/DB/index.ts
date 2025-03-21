@@ -5,4 +5,6 @@ export {
   add_questions,
   add_quiz,
   get_Q,
+  delete_quiz,
+  does_link_exist,
 } from './quizes.js';
