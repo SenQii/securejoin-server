@@ -8,6 +8,7 @@ import {
   validate_link,
   delete_quiz,
   does_link_exist,
+  update_log,
 } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
@@ -229,6 +230,9 @@ app.post('/check_answer', async (req: Request, res: Response): Promise<any> => {
     });
 
     console.log('solved: ', solved);
+    // update attempts log:
+
+    update_log(quiz.id, solved);
 
     if (!solved)
       return res.status(200).json({
@@ -345,8 +349,10 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
         message: 'تم التحقق من رمز التحقق بنجاح',
         direct_link,
       });
+      // update_log(quiz.id, true);
     } else if (response.status == 'expired') {
       console.log('Verification code expired');
+      // update_log(quiz.id, false);
       return res
         .status(200)
         .json({ status: 'expired', message: 'انتهت صلاحية رمز التحقق' });
