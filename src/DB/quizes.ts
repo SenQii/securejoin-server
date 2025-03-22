@@ -246,5 +246,78 @@ export async function does_link_exist(url: string) {
     throw new Error('Error in doesLinkExist: ', e);
   }
 }
+type AttemptLog = {
+  date: string;
+  attempts: number;
+  success_attempts: number;
+};
+
+export async function update_log(quiz_id: string, success: boolean) {
+  try {
+    console.log('Updating log...');
+
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        id: quiz_id,
+      },
+    });
+
+    // CASE: quiz not found
+    if (!quiz) throw new Error('Quiz not found');
+
+    // 1: prepare the log
+    const log = (quiz.attempts_log as AttemptLog[]) || [];
+    const last_attempt = quiz.lastAttemptAt;
+    const currentDate = new Date().toISOString().split('T')[0]; // today's date
+    let lastAttemptDate = last_attempt // last attempt date
+      ? new Date(last_attempt).toISOString().split('T')[0]
+      : null;
+
+    const lastLog = log.find((entry) => entry.date === currentDate);
+    let updatedLog: AttemptLog[];
+
+    // CASE: last attempt was today, update the log
+    if (lastLog)
+      updatedLog = log.map((entry) =>
+        entry.date === currentDate // find the entry for today
+          ? {
+              // update
+              ...entry,
+              attempts: entry.attempts + 1,
+              success_attempts: success
+                ? entry.success_attempts + 1
+                : entry.success_attempts,
+            }
+          : entry
+      );
+    // CASE: first attempt of the day, add a new entry
+    else
+      updatedLog = [
+        ...log,
+        {
+          date: currentDate,
+          attempts: 1,
+          success_attempts: success ? 1 : 0,
+        },
+      ];
+
+    // 2: update the quiz with the new logs
+    await prisma.quiz.update({
+      where: {
+        id: quiz_id,
+      },
+      data: {
+        attempts_log: updatedLog,
+        lastAttemptAt: new Date(),
+        totalAttempts: quiz.totalAttempts + 1,
+      },
+    });
+
+    console.log('Log updated successfully: ');
+  } catch (error) {
+    console.log('Error in update_log: ', error);
+    throw new Error('Error in update_log: ', error);
+  }
+}
 
 export function OTpvertify() {}

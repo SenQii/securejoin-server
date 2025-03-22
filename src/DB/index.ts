@@ -7,4 +7,5 @@ export {
   get_Q,
   delete_quiz,
   does_link_exist,
+  update_log,
 } from './quizes.js';

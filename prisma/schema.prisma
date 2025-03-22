@@ -33,7 +33,9 @@ model Quiz {
   OTPmethod            String?
   questions            Question[]
   lastAttemptAt        DateTime?
+  totalAttempts        Int                 @default(0)
   attempts_log         Json?
+  createdAt            DateTime             @default(now())
 }
 
 model Question {
