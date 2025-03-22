@@ -309,6 +309,7 @@ export async function update_log(quiz_id: string, success: boolean) {
       data: {
         attempts_log: updatedLog,
         lastAttemptAt: new Date(),
+        totalAttempts: quiz.totalAttempts + 1,
       },
     });
 

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Quiz" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "groupName" TEXT DEFAULT 'مجموعة',
+ADD COLUMN     "totalAttempts" INTEGER DEFAULT 0,
+ALTER COLUMN "attempts_log" DROP NOT NULL;
