@@ -326,14 +326,23 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     console.log('verifying OTP...');
 
     // req body check
-    const { code, contact } = req.body as {
+    const { code, contact, quiz_id } = req.body as {
       code: string;
       contact: string;
+      quiz_id: string;
     };
     if (!code)
       return res.status(400).json({
         error: 'Invalid body request',
       });
+
+    // quiz validation
+    const quiz = await validate_link(quiz_id);
+    if (!quiz) {
+      return res.status(404).json({
+        error: 'Quiz not found',
+      });
+    }
 
     // verification
     const response = await client.verify.v2
@@ -344,21 +353,22 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     // response check & return
     if (response.status == 'approved') {
       console.log('OTP verified successfully');
+      update_log(quiz.id, true);
       return res.status(200).json({
         status: 'approved',
         message: 'تم التحقق من رمز التحقق بنجاح',
         direct_link,
       });
-      // update_log(quiz.id, true);
     } else if (response.status == 'expired') {
       console.log('Verification code expired');
-      // update_log(quiz.id, false);
+      update_log(quiz.id, false);
       return res
         .status(200)
         .json({ status: 'expired', message: 'انتهت صلاحية رمز التحقق' });
     }
 
     console.log('Verification code failed');
+    update_log(quiz.id, false);
     return res
       .status(200)
       .json({ status: 'failed', message: 'فشل التحقق من رمز التحقق' });
