@@ -9,6 +9,7 @@ import {
   delete_quiz,
   does_link_exist,
   update_log,
+  validate_link_by_id,
 } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
@@ -169,6 +170,7 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
         status: 'success',
         message: 'OTP',
         otp_method: quiz.OTPmethod,
+        quiz_id: quiz.id,
         vertify_methods: quiz.vertificationMethods,
       });
 
@@ -182,6 +184,7 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
         status: 'success',
         message: 'Questions',
         quiz: quiz.questions,
+        quiz_id: quiz.id,
         vertify_methods: quiz.vertificationMethods,
       });
     }
@@ -192,6 +195,7 @@ app.post('/get_quiz', async (req: Request, res: Response): Promise<any> => {
       status: 'success',
       message: 'BOTH',
       quiz: quiz.questions,
+      quiz_id: quiz.id,
       otp_method: quiz.OTPmethod,
       vertify_methods: quiz.vertificationMethods,
     });
@@ -337,17 +341,19 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
       });
 
     // quiz validation
-    const quiz = await validate_link(quiz_id);
+    const quiz = await validate_link_by_id(quiz_id);
     if (!quiz) {
       return res.status(404).json({
         error: 'Quiz not found',
       });
     }
+    console.log('Quiz found! verifying OTP...');
+    direct_link = quiz.original_url;
 
     // verification
     const response = await client.verify.v2
       .services('VA1294d0625bdb7f42e0da629ca314f4ad')
-      .verificationChecks.create({ to: contact, code: code });
+      .verificationChecks.create({ to: `+966${contact}`, code: code });
 
     console.log('statue: ', response);
     // response check & return

@@ -31,6 +31,28 @@ export async function validate_link(link: string) {
   }
 }
 
+export async function validate_link_by_id(id: string) {
+  try {
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        id: id,
+      },
+      include: {
+        questions: {
+          include: { options: true },
+        },
+      },
+    });
+
+    // CASE : quiz not found
+    if (!quiz) throw new Error('Quiz not found');
+
+    return quiz;
+  } catch (error) {
+    throw new Error(`Error in validate_link_by_id: ${error.message}`);
+  }
+}
+
 // fetch the user's quizes
 export async function get_user_quiz(user_id: string) {
   try {
