@@ -192,6 +192,7 @@ export async function add_quiz(
           original_url: ori_url,
           ownerId: user.id,
           vertificationMethods: ['OTP', 'QUESTIONS'],
+          OTPmethod: otp_method,
         },
       });
     }
