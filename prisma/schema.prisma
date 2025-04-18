@@ -59,7 +59,7 @@ model Option {
 model OTP {
   id        String    @id @default(uuid())
   contact   String    @default("")
-  otp       Int      @default(0)
+  otp       String    @default("")
   createdAt DateTime @default(now())
   expiresAt DateTime @default(now())
   status    String    @default("pending") 
