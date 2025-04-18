@@ -309,7 +309,7 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
 
       // send OTP
 
-      const response = await fetch('http://localhost:3000/api/sendText', {
+      const response = await fetch('http://waha:3000/api/sendText', {
         method: 'POST',
         headers: {
           Accept: 'application/json',
