@@ -10,6 +10,9 @@ import {
   does_link_exist,
   update_log,
   validate_link_by_id,
+  available_OTP,
+  store_OTP,
+  verify_OTP,
 } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
@@ -294,17 +297,39 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
         message: 'تم إرسال رمز التحقق بنجاح, يرجى التحقق من البريد الإلكتروني',
       });
     } else {
-      const response = await client.verify.v2
-        .services('VA1294d0625bdb7f42e0da629ca314f4ad')
-        .verifications.create({ to: `${contact}`, channel: 'sms' });
+      // generate OTP
+      let OTP = Math.floor(100000 + Math.random() * 900000).toString();
+      let available = await available_OTP(OTP);
 
-      console.log('status:', response);
-      if (response.status !== 'pending' && response.status !== 'approved') {
+      while (!available) {
+        console.log('OTP is not available, generating new one...');
+        OTP = Math.floor(100000 + Math.random() * 900000).toString();
+        available = await available_OTP(OTP);
+      }
+
+      // send OTP
+
+      const response = await fetch('http://localhost:3000/api/sendText', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: `${contact}`,
+          text: `رمز التحقق الخاص بك هو: ${OTP} \n\nتنتهي صلاحية الرمز خلال 5 دقائق`,
+          session: 'default',
+        }),
+      });
+      if (response.status !== 201) {
         console.log('OTP sending failed');
         return res.status(500).json({
           error: 'OTP sending failed',
         });
       }
+      // save OTP to DB
+      store_OTP(OTP, contact);
+
       res.status(200).json({
         status: 'approved',
         message: 'تم إرسال رمز التحقق بنجاح, يرجى التحقق من الرسائل النصية',
@@ -351,9 +376,7 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     direct_link = quiz.original_url;
 
     // verification
-    const response = await client.verify.v2
-      .services('VA1294d0625bdb7f42e0da629ca314f4ad')
-      .verificationChecks.create({ to: `+966${contact}`, code: code });
+    const response = await verify_OTP(code, `966${contact}`);
 
     console.log('statue: ', response);
     // response check & return
