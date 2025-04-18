@@ -56,6 +56,15 @@ model Option {
   isCorrect  Boolean  @default(false)
 }
 
+model OTP {
+  id        String    @id @default(uuid())
+  contact   String    @default("")
+  otp       String    @default("")
+  createdAt DateTime @default(now())
+  expiresAt DateTime @default(now())
+  status    String    @default("pending") 
+}
+
 enum VerificationMethod {
   OTP
   QUESTIONS

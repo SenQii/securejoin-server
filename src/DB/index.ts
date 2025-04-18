@@ -10,3 +10,5 @@ export {
   does_link_exist,
   update_log,
 } from './quizes.js';
+
+export { available_OTP, store_OTP, verify_OTP } from './OTP.ts';
