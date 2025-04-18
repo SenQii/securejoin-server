@@ -323,6 +323,8 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
       });
       if (response.status !== 201) {
         console.log('OTP sending failed');
+        console.log('response: ', response.status);
+
         return res.status(500).json({
           error: 'OTP sending failed',
         });
