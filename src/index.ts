@@ -285,7 +285,7 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
         .services('VA1294d0625bdb7f42e0da629ca314f4ad')
         .verifications.create({ to: `${contact}`, channel: 'email' });
 
-      console.log('status:', response);
+      console.log('status:', response.status);
       if (response.status !== 'pending' && response.status !== 'approved') {
         console.log('OTP sending failed');
         return res.status(500).json({
@@ -378,7 +378,10 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     direct_link = quiz.original_url;
 
     // verification
-    const response = await verify_OTP(code, `966${contact}`);
+    let OTP_contact = contact;
+    if (!contact.includes('@')) OTP_contact = '966' + contact;
+
+    const response = await verify_OTP(code, `${contact}`);
 
     console.log('statue: ', response);
     // response check & return

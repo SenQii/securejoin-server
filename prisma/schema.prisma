@@ -36,6 +36,8 @@ model Quiz {
   totalAttempts        Int                 @default(0)
   attempts_log         Json?
   createdAt            DateTime             @default(now())
+  expiredAt           DateTime?             @default(dbgenerated("'2030-01-01T00:00:00Z'::timestamp"))
+  status              String?               @default("active")
 }
 
 model Question {
