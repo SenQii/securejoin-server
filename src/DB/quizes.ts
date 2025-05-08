@@ -343,4 +343,69 @@ export async function update_log(quiz_id: string, success: boolean) {
   }
 }
 
-export function OTpvertify() {}
+export async function toggole_statue(
+  statue: 'activate' | 'deactivate',
+  quiz_id: string
+) {
+  try {
+    console.log('Toggling quiz status...');
+
+    // find the quiz
+    const quiz = await prisma.quiz.findFirst({
+      where: {
+        id: quiz_id,
+      },
+    });
+
+    // CASE: quiz not found
+    if (!quiz) {
+      return {
+        message: 'Quiz not found',
+        status: 'not_found',
+      };
+    }
+
+    console.log('Quiz found: ');
+
+    // CASE: activate
+    if (statue === 'activate') {
+      await prisma.quiz.update({
+        where: {
+          id: quiz_id,
+        },
+        data: {
+          status: 'active',
+        },
+      });
+
+      console.log('Quiz activated successfully: ');
+      return {
+        message: 'Quiz activated successfully',
+        status: 'success',
+      };
+    }
+
+    // CASE: deactivate
+    await prisma.quiz.update({
+      where: {
+        id: quiz_id,
+      },
+      data: {
+        status: 'inactive',
+      },
+    });
+
+    console.log('Quiz deactivated successfully: ');
+    return {
+      message: 'Quiz deactivated successfully',
+      status: 'success',
+    };
+  } catch (error) {
+    console.error('Error in toggole_statue: ', error);
+    return {
+      message: 'Error in toggole_statue',
+      status: 'failed',
+      error: error.message,
+    };
+  }
+}
