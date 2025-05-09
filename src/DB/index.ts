@@ -9,6 +9,7 @@ export {
   delete_quiz,
   does_link_exist,
   update_log,
+  toggole_statue,
 } from './quizes.js';
 
 export { available_OTP, store_OTP, verify_OTP } from './OTP.ts';

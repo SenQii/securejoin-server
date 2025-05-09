@@ -13,6 +13,7 @@ import {
   available_OTP,
   store_OTP,
   verify_OTP,
+  toggole_statue,
 } from './DB';
 import { Question } from './types';
 import { VerificationMethod } from '@prisma/client';
@@ -285,7 +286,7 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
         .services('VA1294d0625bdb7f42e0da629ca314f4ad')
         .verifications.create({ to: `${contact}`, channel: 'email' });
 
-      console.log('status:', response);
+      console.log('status:', response.status);
       if (response.status !== 'pending' && response.status !== 'approved') {
         console.log('OTP sending failed');
         return res.status(500).json({
@@ -378,7 +379,10 @@ app.post('/verify_otp', async (req: Request, res: Response): Promise<any> => {
     direct_link = quiz.original_url;
 
     // verification
-    const response = await verify_OTP(code, `966${contact}`);
+    let OTP_contact = contact;
+    if (!contact.includes('@')) OTP_contact = '966' + contact;
+
+    const response = await verify_OTP(code, `${contact}`);
 
     console.log('statue: ', response);
     // response check & return
@@ -422,7 +426,7 @@ app.post(
       const user = get_user_data_from_access_token(access_Token);
       const user_quiz = await get_user_quiz(user.id);
 
-      console.log('User Quiz(s): ', user_quiz);
+      console.log('User Quiz(s): ', user_quiz.length);
 
       res
         .status(200)
@@ -470,6 +474,64 @@ app.post('/delete_quiz', async (req: Request, res: Response): Promise<any> => {
     res.status(500).json({ error: 'Internal Server Error', message: error });
   }
 });
+
+// EP - update quiz status
+app.post(
+  '/toggle_quiz_status',
+  async (req: Request, res: Response): Promise<any> => {
+    try {
+      console.log('toggling quiz status...');
+
+      // validate
+      const { quiz_id, status } = req.body;
+      const access_Token = req.headers['access-token'] as string;
+      const user = get_user_data_from_access_token(access_Token);
+
+      console.log('body: ', req.body);
+
+      // CASE: invalid user
+      if (!user)
+        return res.status(401).json({
+          error: 'Unauthorized',
+        });
+      // CASE: invalid body
+      if (!quiz_id || !status)
+        return res.status(400).json({
+          error: 'Invalid body request',
+        });
+
+      // CASE: invalid status <<
+      if (status !== 'activate' && status !== 'deactivate')
+        return res.status(400).json({
+          error: 'Invalid status',
+        });
+
+      status === 'activate'
+        ? console.log('activating quiz...')
+        : console.log('deactivating quiz...');
+
+      const response = await toggole_statue(status, quiz_id);
+
+      //  CASE: failed
+      if (!response || response.status !== 'success') {
+        return res.status(500).json({
+          error: 'Failed to activate quiz',
+        });
+      }
+
+      console.log(`Quiz ${response.status}d successfully`);
+
+      return res.status(200).json({
+        status: 'success',
+        message: `Quiz ${response.status}d successfully`,
+      });
+    } catch (error) {
+      console.log('Err in toggle_quiz_status: ', error);
+      res.status(500).json({ error: 'Internal Server Error', message: error });
+    }
+  }
+);
+
 app.listen(port, () => {
   console.log('running at ' + port);
 });
