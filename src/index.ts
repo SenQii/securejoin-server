@@ -43,6 +43,12 @@ const client = Twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+const twilioServiceID = process.env.TWILIO_SERVICE_SID;
+if (!twilioServiceID) {
+  console.error('Twilio Service ID is not defined');
+  throw new Error('Twilio Service ID is not defined');
+}
+
 let direct_link = '';
 
 // EP - creatung secureLink
@@ -283,7 +289,7 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
     // send OTP
     if (method === 'mail') {
       const response = await client.verify.v2
-        .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+        .services(twilioServiceID)
         .verifications.create({ to: `${contact}`, channel: 'email' });
 
       console.log('status:', response.status);
