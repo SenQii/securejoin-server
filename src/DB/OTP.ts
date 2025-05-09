@@ -9,6 +9,12 @@ const client = Twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+const twilioServiceID = process.env.TWILIO_SERVICE_SID;
+if (!twilioServiceID) {
+  console.error('Twilio Service ID is not defined');
+  throw new Error('Twilio Service ID is not defined');
+}
+
 // its not in DB
 export const available_OTP = async (generated_otp: string) => {
   try {
@@ -95,7 +101,7 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
   if (user_contact.includes('@')) {
     // 1: twilio verify the OTP
     const response = await client.verify.v2
-      .services('VA1294d0625bdb7f42e0da629ca314f4ad')
+      .services(twilioServiceID)
       .verificationChecks.create({ to: user_contact, code: otp_code });
 
     // CASE: OTP expired
