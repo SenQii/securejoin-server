@@ -82,7 +82,7 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
       };
 
     // CASE: OTP expired
-    if (otp.expiresAt < new Date())
+    if (otp.expiresAt < new Date() || otp.status === 'expired')
       return {
         status: 'expired',
       };
