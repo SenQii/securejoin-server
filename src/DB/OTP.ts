@@ -112,7 +112,7 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
 
     // fallback
     // CASE: OTP not found
-    if (!response.status || response.status !== 'approved')
+    if (!response.status)
       return {
         status: 'not_found',
       };
