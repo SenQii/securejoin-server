@@ -69,13 +69,10 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
   if (user_contact.length < 10) {
     // 1: check if the OTP is valid
 
-    console.log(`otp_code: 966${otp_code}`);
-    console.log('user_contact', user_contact);
-
     const otp = await prisma.oTP.findFirst({
       where: {
-        otp: `966${otp_code}`,
-        contact: user_contact,
+        otp: otp_code,
+        contact: `966${user_contact}`,
       },
     });
     // CASE: OTP not found
