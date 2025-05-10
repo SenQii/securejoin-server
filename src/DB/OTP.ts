@@ -112,10 +112,12 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
 
     // fallback
     // CASE: OTP not found
-    if (!response.status) console.log('response', response);
-    return {
-      status: 'not_found',
-    };
+    if (!response.status) {
+      console.log('response', response);
+      return {
+        status: 'not_found',
+      };
+    }
   }
 
   return {
