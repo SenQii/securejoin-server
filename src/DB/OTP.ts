@@ -74,8 +74,8 @@ export const verify_OTP = async (otp_code: string, user_contact: string) => {
 
     const otp = await prisma.oTP.findFirst({
       where: {
-        otp: `966${otp_code}`,
-        contact: user_contact,
+        otp: otp_code,
+        contact: `966${user_contact}`,
       },
     });
     // CASE: OTP not found
