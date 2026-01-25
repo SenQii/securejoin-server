@@ -319,6 +319,7 @@ app.post('/send_otp', async (req: Request, res: Response): Promise<any> => {
       const response = await fetch('http://waha:3000/api/sendText', {
         method: 'POST',
         headers: {
+          'X-Api-Key': process.env.WAHA_API_KEY || '',
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
